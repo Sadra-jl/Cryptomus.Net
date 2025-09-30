@@ -1,1 +1,5 @@
-<Solution />
+<Solution>
+  <Project Path="samples\ConsoleSample\ConsoleSample.csproj" Type="Classic C#" />
+  <Project Path="src\PaleLotus.Cryptomus.AspNetCore\PaleLotus.Cryptomus.AspNetCore.csproj" Type="Classic C#" />
+  <Project Path="src\PaleLotus.Cryptomus.Net\PaleLotus.Cryptomus.Net.csproj" Type="Classic C#" />
+</Solution>
