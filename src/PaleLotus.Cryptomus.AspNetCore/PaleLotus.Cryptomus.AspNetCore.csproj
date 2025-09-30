@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <IsPackable>true</IsPackable>
+        <PackageId>PaleLotus.Cryptomus.AspNetCore</PackageId>
+        <Title>Unofficial Cryptomus ASP.NET Core extensions</Title>
+        <Description>ASP.NET Core integration helpers for the Unofficial Cryptomus .NET SDK, including DI registration, health checks, and webhooks.</Description>
+        <PackageTags>cryptomus;aspnetcore;payments;crypto</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\PaleLotus.Cryptomus.Net\PaleLotus.Cryptomus.Net.csproj" />
+    </ItemGroup>
+
+</Project>
