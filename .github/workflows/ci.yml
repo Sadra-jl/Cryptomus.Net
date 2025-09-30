@@ -1,0 +1,107 @@
+name: Build & Publish
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  pull_request:
+
+jobs:
+  build:
+    name: Build and pack
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore dependencies
+        run: |
+          dotnet restore src/PaleLotus.Cryptomus.Net/PaleLotus.Cryptomus.Net.csproj
+          dotnet restore src/PaleLotus.Cryptomus.AspNetCore/PaleLotus.Cryptomus.AspNetCore.csproj
+          dotnet restore samples/ConsoleSample/ConsoleSample.csproj
+
+      - name: Build
+        run: |
+          dotnet build src/PaleLotus.Cryptomus.Net/PaleLotus.Cryptomus.Net.csproj --configuration Release --no-restore
+          dotnet build src/PaleLotus.Cryptomus.AspNetCore/PaleLotus.Cryptomus.AspNetCore.csproj --configuration Release --no-restore
+          dotnet build samples/ConsoleSample/ConsoleSample.csproj --configuration Release --no-restore
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob globstar
+          projects=(**/*Tests.csproj)
+          if [ ${#projects[@]} -eq 0 ]; then
+            echo "No test projects found. Skipping test run."
+            exit 0
+          fi
+          for project in "${projects[@]}"; do
+            echo "Running tests for $project"
+            dotnet test "$project" --configuration Release --no-build --no-restore
+          done
+
+      - name: Determine package version
+        id: vars
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF#refs/tags/v}"
+          else
+            version="0.0.0-ci.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "Using package version $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Pack NuGet packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/packages
+          dotnet pack src/PaleLotus.Cryptomus.Net/PaleLotus.Cryptomus.Net.csproj --configuration Release --no-build -p:ContinuousIntegrationBuild=true -p:PackageVersion=${{ steps.vars.outputs.version }} -o artifacts/packages
+          dotnet pack src/PaleLotus.Cryptomus.AspNetCore/PaleLotus.Cryptomus.AspNetCore.csproj --configuration Release --no-build -p:ContinuousIntegrationBuild=true -p:PackageVersion=${{ steps.vars.outputs.version }} -o artifacts/packages
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: artifacts/packages
+
+  publish:
+    name: Publish to NuGet
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget-packages
+          path: artifacts/packages
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Push packages to NuGet
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for package in artifacts/packages/*.nupkg; do
+            dotnet nuget push "$package" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate
+          done
+          for symbols in artifacts/packages/*.snupkg; do
+            dotnet nuget push "$symbols" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate
+          done
