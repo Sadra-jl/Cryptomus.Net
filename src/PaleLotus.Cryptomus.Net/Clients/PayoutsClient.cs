@@ -22,65 +22,28 @@ public sealed class PayoutsClient(CryptomusHttp http, IOptions<CryptomusOptions>
     public Task<ApiResponse<PayoutInfoResponse>> GetPayoutInfoAsync(PayoutInfoRequest request, CancellationToken ct = default)
         => http.PostAsync<PayoutInfoRequest, ApiResponse<PayoutInfoResponse>>(PayoutClientName, "payout/info", request, RequirePayoutKey(), ct);
 
-    public async IAsyncEnumerable<PayoutHistoryItem> GetPayoutHistoryAsync(PayoutHistoryRequest request, [EnumeratorCancellation] CancellationToken ct = default)
+    public IAsyncEnumerable<PayoutHistoryItem> GetPayoutHistoryAsync(
+        PayoutHistoryRequest request,
+        CancellationToken ct = default)
     {
-        var cursor = request.Cursor;
-        int? page = request.Page is > 0 ? request.Page : 1;
-
-        while (true)
-        {
-            var payload = request with { Cursor = cursor, Page = page };
-            var response = await http.PostAsync<PayoutHistoryRequest, ApiResponse<IReadOnlyList<PayoutHistoryItem>>>(
+        return PaginationHelper.Iterate<PayoutHistoryRequest, PayoutHistoryItem>(
+            initialRequest: request,
+            fetch: (req, token) => http.PostAsync<PayoutHistoryRequest, ApiResponse<IReadOnlyList<PayoutHistoryItem>>>(
                 PayoutClientName,
                 "payout/list",
-                payload,
+                req,
                 RequirePayoutKey(),
-                ct).ConfigureAwait(false);
+                token),
 
-            var items = response.Result ?? Array.Empty<PayoutHistoryItem>();
-            foreach (var item in items)
-                yield return item;
+            withPage: static (req, page) => req with { Page = page, Cursor = null },
+            withCursor: static (req, cursor) => req with { Cursor = cursor, Page = null },
+            getFirstPage: static req => req.Page is > 0 ? req.Page.Value : 1,
+            hasExplicitCursor: static req => !string.IsNullOrEmpty(req.Cursor),
+            getCursor: static req => req.Cursor,
 
-            var paginate = response.Paginate;
-            if (paginate is null)
-                yield break;
-
-            if (!string.IsNullOrEmpty(paginate.NextCursor))
-            {
-                cursor = paginate.NextCursor;
-                page = null;
-                continue;
-            }
-
-            if (paginate.HasPages == true)
-            {
-                var currentPage = page is > 0 ? page.Value : 1;
-                var perPage = paginate.PerPage ?? payload.Limit ?? items.Count;
-                if (perPage <= 0)
-                    perPage = items.Count == 0 ? 1 : items.Count;
-
-                if (paginate.Count is int count && perPage > 0)
-                {
-                    var totalPages = (int)Math.Ceiling(count / (double)perPage);
-                    if (currentPage >= totalPages)
-                        yield break;
-                }
-                else if (items.Count == 0)
-                {
-                    yield break;
-                }
-
-                page = currentPage + 1;
-                continue;
-            }
-
-            if (items.Count == 0)
-                yield break;
-
-            break;
-        }
+            ct: ct
+        );
     }
-
     public Task<ApiResponse<PayoutStatusesResponse>> GetPayoutStatusesAsync(CancellationToken ct = default)
         => http.PostAsync<object, ApiResponse<PayoutStatusesResponse>>(PayoutClientName, "payout/statuses", new { }, RequirePayoutKey(), ct);
 

@@ -25,17 +25,11 @@ public abstract class CryptomusApiException(
     {
         var builder = new StringBuilder();
         builder.Append("Cryptomus API returned state ");
-        builder.Append(descriptor.State);
-        builder.Append(' ');
-        builder.Append('(');
-        builder.Append(descriptor.Code);
-        builder.Append("): ");
-        builder.Append(descriptor.Title);
+        builder.Append($"{descriptor.State} ({descriptor.Code}): {descriptor.Title}");
 
         if (!string.IsNullOrWhiteSpace(descriptor.Description))
         {
-            builder.Append(". ");
-            builder.Append(descriptor.Description);
+            builder.Append($". {descriptor.Description}");       
         }
 
         if (details.HasMessages)

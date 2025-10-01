@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -10,7 +11,7 @@ namespace PaleLotus.Cryptomus.AspNetCore.Webhooks;
 public sealed class WebhookVerificationFilter(WebhookType type) : IEndpointFilter
 {
     /// <inheritdoc />
-    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    public async ValueTask<object?> InvokeAsync([NotNull]EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var http = context.HttpContext;
         if (!http.Request.Headers.TryGetValue("sign", out var signHeader) || string.IsNullOrWhiteSpace(signHeader))

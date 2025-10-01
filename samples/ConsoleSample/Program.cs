@@ -12,9 +12,15 @@ var cryptomus = services.GetRequiredService<CryptomusClient>();
 //     Console.WriteLine($"From: {exchangeRateItem.From}, To: {exchangeRateItem.To}, Course: {exchangeRateItem.Course}");
 // }
 var request = new CreateInvoiceRequest("1", "USD", "1666");
-var invoice = await cryptomus.Payments.CreateInvoiceAsync(request).ConfigureAwait(false);
+//var invoice = await cryptomus.Payments.CreateInvoiceAsync(request).ConfigureAwait(false);
 
-Console.WriteLine(invoice.Result);
+var i = 0;
+Console.WriteLine(i++);
+Console.WriteLine(i);
+Console.WriteLine(++i);
+Console.WriteLine(i);
+
+//Console.WriteLine(invoice.Result);
 
 return;
 
