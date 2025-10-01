@@ -1,5 +1,3 @@
-using System;
-using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace PaleLotus.Cryptomus.Net.Models;

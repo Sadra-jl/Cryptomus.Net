@@ -20,10 +20,9 @@ internal static class PaginationHelper
             ? withCursor(initialRequest, getCursor(initialRequest))
             : withPage(initialRequest, firstPage);
 
-        var res = await fetch(firstReq, ct).ConfigureAwait(false);
-        foreach (var item in res.Result ?? []) yield return item;
+        var (_, readOnlyList, _, p) = await fetch(firstReq, ct).ConfigureAwait(false);
+        foreach (var item in readOnlyList ?? []) yield return item;
 
-        var p = res.Paginate;
         if (p is null) yield break;
 
         var useCursor = hasExplicitCursor(initialRequest) || !string.IsNullOrEmpty(p.NextCursor);
@@ -81,15 +80,14 @@ internal static class PaginationHelper
         {
             ct.ThrowIfCancellationRequested();
 
-            var res = await fetch(withPage(initialRequest, page), ct).ConfigureAwait(false);
+            var (_, items, _, pagination) = await fetch(withPage(initialRequest, page), ct).ConfigureAwait(false);
 
-            var items = res.Result;
             if (items is null || items.Count == 0)
                 yield break;
 
             foreach (var item in items) yield return item;
 
-            if (res.Paginate?.HasPages != true)
+            if (pagination?.HasPages != true)
                 yield break;
         }
     }
