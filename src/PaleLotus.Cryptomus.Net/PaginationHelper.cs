@@ -1,9 +1,7 @@
+using System.Runtime.CompilerServices;
 using PaleLotus.Cryptomus.Net.Models;
 
 namespace PaleLotus.Cryptomus.Net;
-
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 internal static class PaginationHelper
 {
@@ -31,31 +29,59 @@ internal static class PaginationHelper
         var useCursor = hasExplicitCursor(initialRequest) || !string.IsNullOrEmpty(p.NextCursor);
         if (useCursor)
         {
-            var seen = new HashSet<string?>(StringComparer.Ordinal);
-            var cursor = p.NextCursor;
-
-            while (!string.IsNullOrEmpty(cursor))
+            await foreach (var item in CursorFlow(
+                initialRequest, fetch, withCursor, p.NextCursor, ct).ConfigureAwait(false))
             {
-                ct.ThrowIfCancellationRequested();
-
-                if (!seen.Add(cursor))
-                    yield break;
-
-                res = await fetch(withCursor(initialRequest, cursor), ct).ConfigureAwait(false);
-
-                foreach (var item in res.Result ?? []) yield return item;
-                cursor = res.Paginate?.NextCursor;
+                yield return item;
             }
             yield break;
         }
 
         if (p.HasPages != true) yield break;
 
-        for (var page = firstPage + 1; ; page++)
+        await foreach (var item in PageFlow(
+            initialRequest, fetch, withPage, firstPage + 1, ct).ConfigureAwait(false))
+        {
+            yield return item;
+        }
+    }
+
+    private static async IAsyncEnumerable<TItem> CursorFlow<TRequest, TItem>(
+        TRequest initialRequest,
+        Func<TRequest, CancellationToken, Task<ApiResponse<IReadOnlyList<TItem>>>> fetch,
+        Func<TRequest, string?, TRequest> withCursor,
+        string? startCursor,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        var seen = new HashSet<string?>(StringComparer.Ordinal);
+        var cursor = startCursor;
+
+        while (!string.IsNullOrEmpty(cursor))
         {
             ct.ThrowIfCancellationRequested();
 
-            res = await fetch(withPage(initialRequest, page), ct).ConfigureAwait(false);
+            if (!seen.Add(cursor))
+                yield break;
+
+            var res = await fetch(withCursor(initialRequest, cursor), ct).ConfigureAwait(false);
+
+            foreach (var item in res.Result ?? []) yield return item;
+            cursor = res.Paginate?.NextCursor;
+        }
+    }
+
+    private static async IAsyncEnumerable<TItem> PageFlow<TRequest, TItem>(
+        TRequest initialRequest,
+        Func<TRequest, CancellationToken, Task<ApiResponse<IReadOnlyList<TItem>>>> fetch,
+        Func<TRequest, int, TRequest> withPage,
+        int startPage,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        for (var page = startPage; ; page++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var res = await fetch(withPage(initialRequest, page), ct).ConfigureAwait(false);
 
             var items = res.Result;
             if (items is null || items.Count == 0)
