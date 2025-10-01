@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace PaleLotus.Cryptomus.Net.Models;
@@ -82,4 +83,36 @@ public record PaymentDetails
 
     [JsonPropertyName("updated_at")]
     public DateTimeOffset? UpdatedAt { get; init; }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        return
+            $"Uuid={Uuid}, " +
+            $"OrderId={OrderId}, " +
+            $"Amount={Amount}, " +
+            $"Currency={Currency}, " +
+            $"PaymentStatus={PaymentStatus}, " +
+            $"Status={Status}, " +
+            $"Url={Url}, " +
+            $"PaymentAmount={PaymentAmount ?? "N/A"}, " +
+            $"PaymentAmountUsd={PaymentAmountUsd ?? "N/A"}, " +
+            $"PayerAmount={PayerAmount ?? "N/A"}, " +
+            $"PayerAmountExchangeRate={PayerAmountExchangeRate ?? "N/A"}, " +
+            $"DiscountPercent={DiscountPercent ?? "N/A"}, " +
+            $"Discount={Discount ?? "N/A"}, " +
+            $"PayerCurrency={PayerCurrency ?? "N/A"}, " +
+            $"MerchantAmount={MerchantAmount ?? "N/A"}, " +
+            $"Commission={Commission ?? "N/A"}, " +
+            $"Network={Network ?? "N/A"}, " +
+            $"Address={Address ?? "N/A"}, " +
+            $"From={From ?? "N/A"}, " +
+            $"TransactionId={TransactionId ?? "N/A"}, " +
+            $"ExpiredAt={(ExpiredAt.HasValue ? ExpiredAt.Value.ToString() : "N/A")}, " +
+            $"IsFinal={(IsFinal.HasValue ? IsFinal.Value.ToString() : "N/A")}, " +
+            $"AdditionalData={AdditionalData ?? "N/A"}, " +
+            $"Comments={Comments ?? "N/A"}, " +
+            $"CreatedAt={(CreatedAt.HasValue ? CreatedAt.Value.ToString("u") : "N/A")}, " +
+            $"UpdatedAt={(UpdatedAt.HasValue ? UpdatedAt.Value.ToString("u") : "N/A")}";
+    }
 }
