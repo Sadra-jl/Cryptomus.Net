@@ -13,20 +13,17 @@ internal static class CryptomusErrorMessageParser
 
         var trimmed = rawMessage.Trim();
 
-        if (trimmed.Length > 0 && (trimmed[0] == '{' || trimmed[0] == '['))
+        if (trimmed.Length <= 0 || (trimmed[0] != '{' && trimmed[0] != '['))
+            return new CryptomusErrorDetails(rawMessage, null, [trimmed]);
+        try
         {
-            try
-            {
-                using var document = JsonDocument.Parse(trimmed);
-                return ParseJson(rawMessage, document.RootElement);
-            }
-            catch (JsonException)
-            {
-                return new CryptomusErrorDetails(rawMessage, null, new[] { trimmed });
-            }
+            using var document = JsonDocument.Parse(trimmed);
+            return ParseJson(rawMessage, document.RootElement);
         }
-
-        return new CryptomusErrorDetails(rawMessage, null, new[] { trimmed });
+        catch (JsonException)
+        {
+            return new CryptomusErrorDetails(rawMessage, null, [trimmed]);
+        }
     }
 
     private static CryptomusErrorDetails ParseJson(string rawMessage, JsonElement element)
@@ -35,9 +32,9 @@ internal static class CryptomusErrorMessageParser
         {
             JsonValueKind.Object => ParseObject(rawMessage, element),
             JsonValueKind.Array => ParseArray(rawMessage, element),
-            JsonValueKind.String => new CryptomusErrorDetails(rawMessage, null, new[] { element.GetString() ?? string.Empty }),
+            JsonValueKind.String => new CryptomusErrorDetails(rawMessage, null, [element.GetString() ?? string.Empty]),
             JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False
-                => new CryptomusErrorDetails(rawMessage, null, new[] { element.ToString() }),
+                => new CryptomusErrorDetails(rawMessage, null, [element.ToString()]),
             _ => new CryptomusErrorDetails(rawMessage, null, null),
         };
     }
@@ -84,7 +81,7 @@ internal static class CryptomusErrorMessageParser
             case JsonValueKind.String:
                 var str = element.GetString();
                 if (!string.IsNullOrWhiteSpace(str))
-                    items.Add(str!);
+                    items.Add(str);
                 break;
 
             case JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False:

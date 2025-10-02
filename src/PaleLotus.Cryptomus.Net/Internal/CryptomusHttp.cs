@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using PaleLotus.Cryptomus.Net.Abstractions;
-using PaleLotus.Cryptomus.Net.Exceptions;
 using PaleLotus.Cryptomus.Net.Internal.Errors;
 
 namespace PaleLotus.Cryptomus.Net.Internal;
