@@ -3,6 +3,8 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using PaleLotus.Cryptomus.Net.Abstractions;
+using PaleLotus.Cryptomus.Net.Exceptions;
+using PaleLotus.Cryptomus.Net.Internal.Errors;
 
 namespace PaleLotus.Cryptomus.Net.Internal;
 
@@ -76,6 +78,13 @@ public sealed class CryptomusHttp(IHttpClientFactory factory, IOptions<Cryptomus
         using var resp = await client.SendAsync(request, ct).ConfigureAwait(false);
         var payload = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
-        return !resp.IsSuccessStatusCode ? throw new CryptomusHttpException(resp.StatusCode, payload) : JsonSerializer.Deserialize<TResp>(payload, jsonOpts ?? new())!;
+        if (!resp.IsSuccessStatusCode)
+            throw new CryptomusHttpException(resp.StatusCode, payload);
+
+        var result = JsonSerializer.Deserialize<TResp>(payload, jsonOpts ?? new());
+        if (result is ICryptomusApiResponse apiResponse)
+            CryptomusApiExceptionFactory.ThrowIfError(apiResponse.State, apiResponse.Message);
+
+        return result!;
     }
 }
